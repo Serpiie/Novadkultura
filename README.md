@@ -1,0 +1,2 @@
+# Novadkultura
+Vieta atrakciju atrašanai
