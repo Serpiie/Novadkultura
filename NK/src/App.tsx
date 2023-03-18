@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, {  useState,useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { useNavigate } from 'react-router-dom';
 
-import mysql from 'mysql';
+import { GeoJsonObject } from 'geojson';
+import { MapContainer, TileLayer, } from 'react-leaflet';
+
+import { GeoJSON } from 'react-leaflet';
+import {data} from './data.js';
+import * as L from 'leaflet'
+
+const typedGeojson: GeoJsonObject = data;
+
 
 
 interface User {
@@ -24,6 +30,12 @@ interface RegisterProps {
 interface MainProps {
   onLogout: () => void;
 }
+interface Attraction {
+  id: number;
+  name: string;
+  description: string;
+}
+
 
 function generateUniqueId(): number {
   return Math.floor(Math.random() * 1000000);
@@ -31,13 +43,16 @@ function generateUniqueId(): number {
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(Boolean(localStorage.getItem("isLoggedIn")));
-  
+ 
    const handleLogin = async (user: User) => {
     try {
       const response = await axios.post("/login", user);
       if (response.status === 200) {
         localStorage.setItem("isLoggedIn", "true");
         setIsLoggedIn(true);
+        const { id,username } = response.data; // extract user id from response data
+        localStorage.setItem("userId", id);
+        localStorage.setItem('name', username);
       }
     } catch (error) {
       console.error(error);
@@ -50,6 +65,9 @@ function App() {
       if (response.status === 200) {
         localStorage.setItem("isLoggedIn", "true");
         setIsLoggedIn(true);
+        const { id,username } = response.data; // extract user id from response data
+        localStorage.setItem("userId", id);
+        localStorage.setItem('name', username);
       }
     } catch (error) {
       console.error(error);
@@ -114,6 +132,9 @@ function RegisterPage({ onRegister }: RegisterProps) {
   );
 }
 
+
+
+
 function MapPlaceholder() {
   return (
     <p>
@@ -124,6 +145,76 @@ function MapPlaceholder() {
 }
 
 function MapWithPlaceholder() {
+  
+  const geojsonStyle = {
+    color: 'green',
+    fillColor: 'lightgreen',
+    fillOpacity: 0.5,
+    weight: 2,
+  };
+
+  function getFeatureStyle(feature: any): L.PathOptions {
+    return {
+      fillColor: 'blue',
+      weight: 2,
+      opacity: 1,
+      color: 'white',
+      dashArray: '3',
+      fillOpacity: 0.5
+    };
+  }  
+  
+  function handleClick(e: any) {
+    const layer = e.target;
+    const feature = layer.feature;
+    const [attractions, setAttractions] = useState<Attraction[]>([]);
+  
+    // Fetch list of attractions from SQL server
+    axios.get('/favorites')
+      .then(response => {
+        setAttractions(response.data);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+  
+    // Build popup content
+    const popupContent = `
+      <div>
+        <h3>${feature.properties.name}</h3>
+        <p>${feature.properties.description}</p>
+        <ul>
+          ${attractions.map(attraction => `
+            <li>
+              ${attraction.name}
+              <button onClick={() => addToFavorites(attraction)}>Add to Favorites</button>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+    const popup = L.popup().setContent(popupContent);
+    layer.bindPopup(popup).openPopup();
+  
+    // Add attraction to favorites
+    function addToFavorites(attraction: any) {
+      // Implement logic to add attraction to user's favorites
+       // Replace with actual user ID
+       const userId = localStorage.getItem("userId");
+      // Send POST request to server to add attraction to user's favorites
+      axios.post('/favorites', {
+        attractionId: attraction.id,
+        userId: userId
+      })
+      .then(response => {
+        console.log(`Added ${attraction.name} to favorites.`);
+      })
+      .catch(error => {
+        console.error(error);
+
+      console.log(`Added ${attraction.name} to favorites.`);
+      });
+    }}
   return (
     
     <MapContainer className="map"
@@ -136,37 +227,70 @@ function MapWithPlaceholder() {
         url="https://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}{r}.png"
         //url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+       <GeoJSON
+        data={typedGeojson}
+        style={geojsonStyle}
+        onEachFeature={(feature, layer) => {
+          layer.on({
+            click: handleClick
+          });
+        }}
+        pointToLayer={(feature, latlng) => {
+          return L.circleMarker(latlng, getFeatureStyle(feature));
+        }}
+      />
+
     </MapContainer>
+    
     
   )
 }
-function UserInfo(){
+function UserInfo() {
+  const [favoriteAttractions, setFavoriteAttractions] = useState<Attraction[]>([]);
 
-  return ( ''
- /*   
-      <div id = 'info'>
-        <h2>{user.username}</h2>
-        <div>
-          <h3>Favorite Attractions:</h3>
-          <ul>
-            {favoriteAttractions.map(attraction => (
-              <li key={attraction.id}>{attraction.name}</li>
-            ))}
-          </ul>
-        </div>
+  useEffect(() => {
+    const fetchData = async () => {
+      const result = await axios.get<Attraction[]>('/api/favoriteAttractions');
+      setFavoriteAttractions(result.data);
+    };
+
+    fetchData();
+  }, []);
+
+  const handleRemoveAttraction = async (id: number) => {
+    await axios.delete(`/api/favoriteAttractions/${id}`);
+    const updatedAttractions = favoriteAttractions.filter((attraction) => attraction.id !== id);
+    setFavoriteAttractions(updatedAttractions);
+  };
+
+  return (
+    <div id='info'>
+     {/* <h2>{localStorage.getItem('name')}</h2> */}
+     <h2>username</h2>
+      <div>
+        <h3>Favorite Attractions:</h3>
+        <ul>
+          {favoriteAttractions.map((attraction) => (
+            <li key={attraction.id}>
+              {attraction.name}
+              <button onClick={() => handleRemoveAttraction(attraction.id)}>Remove</button>
+            </li>
+          ))}
+        </ul>
       </div>
-    
-  */
+    </div>
   );
-
 }
 
 function MainPage({ onLogout }: MainProps) {
   
   return (
-    
+    <div>
     <MapWithPlaceholder />
-   //<UserInfo />
+    <UserInfo />
+    
+    </div>
+    
   );
 }
  

@@ -54,4 +54,65 @@ app.post('/register', (req, res) => {
   });
 });
 
+app.post('/favorites', (req, res) => {
+  const { userId, ObjektaNosaukums, Address } = req.body;
+
+  // Insert the user's favorite attraction into the database
+  connection.query('INSERT INTO favorites (userId, ObjektaNosaukums, Address) VALUES (?, ?,?)', [userId, ObjektaNosaukums, Address ], (err, result) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send('Error inserting favorite');
+    } else {
+      res.send('Favorite added successfully');
+    }
+  });
+});
+
+app.get('/favorites', (req, res) => {
+  const { id } = req.params;
+
+  // Get the user's favorite attractions from the database
+  connection.query('SELECT * FROM favorites WHERE id = ?', [id], (err, results) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send('Error retrieving favorites');
+    } else {
+      res.send(results);
+    }
+  });
+});
+
+
+app.get('/api/favoriteAttractions', (req, res) => {
+  const sql = 'SELECT * FROM favorite_attractions';
+
+  pool.query(sql, (err, rows) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+
+    res.json(rows);
+  });
+});
+
+// DELETE request to remove favorite attraction
+app.delete('/api/favoriteAttractions/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const sql = 'DELETE FROM favorite_attractions WHERE id = ?';
+
+  pool.query(sql, [id], (err, result) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+
+    if (result.affectedRows === 0) {
+      return res.sendStatus(404);
+    }
+
+    res.sendStatus(204);
+  });
+});
+
+
+
 app.listen(3000, () => console.log('Server running on port 3000'));
