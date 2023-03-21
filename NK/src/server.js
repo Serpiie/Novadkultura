@@ -8,15 +8,13 @@ app.use(bodyParser.json());
 
 // create a connection to the database
 const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'password',
-  database: 'my_database',
+  host: '10.2.67.105',
+  user: 'test123',
+  password: '12345678',
+  database: 'Novadkultura',
 });
 
-function generateUniqueId() {
-    return Math.floor(Math.random() * 1000000);
-  }
+
   
 // handle login requests
 app.post('/login', (req, res) => {
@@ -42,8 +40,9 @@ app.post('/login', (req, res) => {
 // handle register requests
 app.post('/register', (req, res) => {
   const { username, password } = req.body;
+  const id = generateUniqueId();
   const sql = `INSERT INTO users (id, username, password) VALUES (?, ?, ?)`;
-  const id = generateUniqueId(); // replace with your own method to generate unique IDs
+   // replace with your own method to generate unique IDs
   connection.query(sql, [id, username, password], (err, results) => {
     if (err) {
       console.error(err);
@@ -68,7 +67,7 @@ app.post('/favorites', (req, res) => {
   });
 });
 
-app.get('/favorites', (req, res) => {
+app.post('/favorites', (req, res) => {
   const { id } = req.params;
 
   // Get the user's favorite attractions from the database
@@ -83,10 +82,10 @@ app.get('/favorites', (req, res) => {
 });
 
 
-app.get('/api/favoriteAttractions', (req, res) => {
+app.post('/api/favoriteAttractions', (req, res) => {
   const sql = 'SELECT * FROM favorite_attractions';
 
-  pool.query(sql, (err, rows) => {
+  connection.query(sql, (err, rows) => {
     if (err) {
       return res.status(500).send(err);
     }
@@ -100,7 +99,7 @@ app.delete('/api/favoriteAttractions/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const sql = 'DELETE FROM favorite_attractions WHERE id = ?';
 
-  pool.query(sql, [id], (err, result) => {
+  connection.query(sql, [id], (err, result) => {
     if (err) {
       return res.status(500).send(err);
     }

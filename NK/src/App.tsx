@@ -1,5 +1,5 @@
 import React, {  useState,useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import axios from "axios";
 
 import { GeoJsonObject } from 'geojson';
@@ -12,11 +12,53 @@ import * as L from 'leaflet'
 const typedGeojson: GeoJsonObject = data;
 
 
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = 'https://uixogbasmrhokrqjmcbj.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpeG9nYmFzbXJob2tycWptY2JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzkzNzk4OTYsImV4cCI6MTk5NDk1NTg5Nn0.NC0XPmPognxnvCZQPur4MsmKWq-kFKVzP-Q-2sMPsaE'
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+async function addNewUser(id:number, username: string, password: string) {
+  const { data, error } = await supabase
+    .from('Users')
+    .insert([{ id, username, password }]);
+
+  if (error) {
+    console.error(error);
+  } else {
+    console.log('New user added:', data);
+  }
+}
+async function checkUser(username: string, password: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .eq('password', password)
+    .single();
+
+  if (error) {
+    console.error(error);
+    return false;
+  }
+
+  if (!data) {
+    console.log('User not found');
+    return false;
+  }
+
+  return data;
+}
+
+
+function generateUniqueId() {
+  return Math.floor(Math.random() * 1000000);
+}
 
 interface User {
   id: number;
   username: string;
-  password: string;
+  password: string; 
 }
 
 interface LoginProps {
@@ -37,57 +79,54 @@ interface Attraction {
 }
 
 
-function generateUniqueId(): number {
-  return Math.floor(Math.random() * 1000000);
-}
-
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(Boolean(localStorage.getItem("isLoggedIn")));
- 
+
    const handleLogin = async (user: User) => {
-    try {
-      const response = await axios.post("/login", user);
-      if (response.status === 200) {
-        localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("isLoggedIn", "true");
         setIsLoggedIn(true);
-        const { id,username } = response.data; // extract user id from response data
-        localStorage.setItem("userId", id);
-        localStorage.setItem('name', username);
-      }
-    } catch (error) {
-      console.error(error);
-    }
+    
   };
 
   const handleRegister = async (user: User) => {
-    try {
-      const response = await axios.post("/register", user);
-      if (response.status === 200) {
         localStorage.setItem("isLoggedIn", "true");
         setIsLoggedIn(true);
-        const { id,username } = response.data; // extract user id from response data
-        localStorage.setItem("userId", id);
-        localStorage.setItem('name', username);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+        
+    };
+      
+  
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     setIsLoggedIn(false);
   };
-
-  return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-        <Route path="/register" element={<RegisterPage onRegister={handleRegister} />} />
-       {/* <Route path="/main" element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} /> */}
-       <Route path="/main" element={ <MainPage onLogout={handleLogout} />} />
-      </Routes>
+ 
+return(
+<Router>
+  <div>
+  <div id='list'>
+        <header>
+          
+          <nav>
+            <ul>
+              <li><Link to="/main">main</Link></li>
+              <li><Link to="/login">login</Link></li>
+              <li><Link to="/register">register</Link></li>
+            </ul>
+          </nav>
+        </header>
+        </div>
+        <main>
+          <Routes>
+            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="/register" element={<RegisterPage onRegister={handleRegister} />} />
+            <Route path="/main" element={ <MainPage onLogout={handleLogout} />} />
+          </Routes>
+        </main>
+      
+      </div>
     </Router>
+  
   );
 }
 
@@ -96,7 +135,12 @@ function LoginPage({ onLogin }: LoginProps) {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onLogin(user);
+    localStorage.setItem('name', user.username);
+    const logged = checkUser(user.username, user.password)
+    console.log(logged)
+    if (!logged)
+    localStorage.setItem("isLoggedIn", "true");
+
   };
 
   return (
@@ -106,29 +150,37 @@ function LoginPage({ onLogin }: LoginProps) {
       <input type="password" value={user.password} onChange={(event) => setUser({ ...user, password: event.target.value })} />
       <button type="submit">Log In</button>
       <br />
-      <a href="/register">Register</a>
+      <Link to="/register">Register</Link>
     </form>
     </div>
   );
 }
 
 function RegisterPage({ onRegister }: RegisterProps) {
+  
   const [user, setUser] = useState<User>({id: 0, username: "", password: "" });
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const id = generateUniqueId(); // replace with your own method to generate unique IDs
-    onRegister({ ...user, id });
+    // replace with your own method to generate unique IDs
+    localStorage.setItem('name', user.username);
+    const id = generateUniqueId()
+   
+    addNewUser(id, user.username, user.password)
+
+   
   };
 
   return (
+    <div id="register">
     <form onSubmit={handleSubmit}>
       <input type="text" value={user.username} onChange={(event) => setUser({ ...user, username: event.target.value })} />
       <input type="password" value={user.password} onChange={(event) => setUser({...user, password: event.target.value })} />
     <button type="submit">Register</button>
     <br />
-    <a href="/login">Log In</a>
+    <Link to="/login">Log In</Link>
     </form>
+    </div>
   );
 }
 
@@ -138,7 +190,7 @@ function RegisterPage({ onRegister }: RegisterProps) {
 function MapPlaceholder() {
   return (
     <p>
-      Latvia{' '}
+      Latvia
       <noscript>You need to enable JavaScript to see this map.</noscript>
     </p>
   )
@@ -168,7 +220,7 @@ function MapWithPlaceholder() {
     const layer = e.target;
     const feature = layer.feature;
     const [attractions, setAttractions] = useState<Attraction[]>([]);
-  
+ 
     // Fetch list of attractions from SQL server
     axios.get('/favorites')
       .then(response => {
@@ -227,17 +279,9 @@ function MapWithPlaceholder() {
         url="https://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}{r}.png"
         //url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-       <GeoJSON
-        data={typedGeojson}
-        style={geojsonStyle}
-        onEachFeature={(feature, layer) => {
-          layer.on({
-            click: handleClick
-          });
-        }}
-        pointToLayer={(feature, latlng) => {
-          return L.circleMarker(latlng, getFeatureStyle(feature));
-        }}
+       <GeoJSON data={typedGeojson} style={geojsonStyle}
+        onEachFeature={(feature, layer) => { layer.on({ click: handleClick}); }}
+        pointToLayer={(feature, latlng) => { return L.circleMarker(latlng, getFeatureStyle(feature)); }}
       />
 
     </MapContainer>
@@ -250,7 +294,7 @@ function UserInfo() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const result = await axios.get<Attraction[]>('/api/favoriteAttractions');
+      const result = await axios.post<Attraction[]>('/api/favoriteAttractions');
       setFavoriteAttractions(result.data);
     };
 
@@ -262,11 +306,12 @@ function UserInfo() {
     const updatedAttractions = favoriteAttractions.filter((attraction) => attraction.id !== id);
     setFavoriteAttractions(updatedAttractions);
   };
-
+  const myItem = localStorage.getItem('name');
   return (
     <div id='info'>
-     {/* <h2>{localStorage.getItem('name')}</h2> */}
-     <h2>username</h2>
+      
+     <h2>username:</h2>
+     <h1>{localStorage.getItem('name')}</h1>
       <div>
         <h3>Favorite Attractions:</h3>
         <ul>
@@ -288,9 +333,7 @@ function MainPage({ onLogout }: MainProps) {
     <div>
     <MapWithPlaceholder />
     <UserInfo />
-    
     </div>
-    
   );
 }
  
