@@ -1,6 +1,6 @@
 import React, {  useState,useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
-import axios from "axios";
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
+
 
 import { GeoJsonObject } from 'geojson';
 import { MapContainer, TileLayer, } from 'react-leaflet';
@@ -31,7 +31,7 @@ async function addNewUser(id:number, username: string, password: string) {
 }
 async function checkUser(username: string, password: string) {
   const { data, error } = await supabase
-    .from('users')
+    .from('Users')
     .select('*')
     .eq('username', username)
     .eq('password', password)
@@ -46,13 +46,17 @@ async function checkUser(username: string, password: string) {
     console.log('User not found');
     return false;
   }
-
-  return data;
+ 
+  return data
 }
 
-
-function generateUniqueId() {
-  return Math.floor(Math.random() * 1000000);
+interface Favorite {
+  id: number;
+  name: string;
+}
+interface Props {
+  list: string[];
+  onDeleteItem: (index: number) => Promise<void>;
 }
 
 interface User {
@@ -64,7 +68,9 @@ interface User {
 interface LoginProps {
   onLogin: (user: User) => void;
 }
-
+interface Props {
+  list: string[];
+}
 interface RegisterProps {
   onRegister: (user: User) => void;
 }
@@ -72,11 +78,7 @@ interface RegisterProps {
 interface MainProps {
   onLogout: () => void;
 }
-interface Attraction {
-  id: number;
-  name: string;
-  description: string;
-}
+
 
 
 function App() {
@@ -89,12 +91,10 @@ function App() {
   };
 
   const handleRegister = async (user: User) => {
-        localStorage.setItem("isLoggedIn", "true");
-        setIsLoggedIn(true);
+  
+       
         
     };
-      
-  
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
@@ -132,15 +132,22 @@ return(
 
 function LoginPage({ onLogin }: LoginProps) {
   const [user, setUser] = useState<User>({id: 0, username: "", password: "" });
-
+  const navigate = useNavigate();
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    localStorage.setItem('name', user.username);
+    
     const logged = checkUser(user.username, user.password)
     console.log(logged)
     if (!logged)
+    {}
+    else
+    {
     localStorage.setItem("isLoggedIn", "true");
-
+    localStorage.setItem("data", JSON.stringify(logged))
+    
+    navigate("/main");
+    
+    }
   };
 
   return (
@@ -157,19 +164,38 @@ function LoginPage({ onLogin }: LoginProps) {
 }
 
 function RegisterPage({ onRegister }: RegisterProps) {
+  const navigate = useNavigate();
+  async function generateUniqueId() {
+
+    const userId = Math.floor(Math.random() * 1000000)
+    let id = userId 
+  // Define the query to select the user with the given ID
+    const { data, error } = await supabase
+      .from('Users')
+    .select('*')
+    .eq('id', userId);
   
+  // Check for errors and whether the user exists
+  if (error) {
+    console.error(error);
+  } else if (data && data.length > 0) {
+    id  = await generateUniqueId()
+  } 
+  
+   return Promise.resolve(id);
+  }
+
   const [user, setUser] = useState<User>({id: 0, username: "", password: "" });
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // replace with your own method to generate unique IDs
-    localStorage.setItem('name', user.username);
-    const id = generateUniqueId()
-   
-    addNewUser(id, user.username, user.password)
-
-   
+    const id = await generateUniqueId();
+    
+    addNewUser(id, user.username, user.password);
+    navigate("/login");
   };
+  
 
   return (
     <div id="register">
@@ -219,34 +245,15 @@ function MapWithPlaceholder() {
   function handleClick(e: any) {
     const layer = e.target;
     const feature = layer.feature;
-    const [attractions, setAttractions] = useState<Attraction[]>([]);
+     
  
     // Fetch list of attractions from SQL server
-    axios.get('/favorites')
-      .then(response => {
-        setAttractions(response.data);
-      })
-      .catch(error => {
-        console.error(error);
-      });
-  
+    // fetch atractions with supabase
+    //
     // Build popup content
-    const popupContent = `
-      <div>
-        <h3>${feature.properties.name}</h3>
-        <p>${feature.properties.description}</p>
-        <ul>
-          ${attractions.map(attraction => `
-            <li>
-              ${attraction.name}
-              <button onClick={() => addToFavorites(attraction)}>Add to Favorites</button>
-            </li>
-          `).join('')}
-        </ul>
-      </div>
-    `;
-    const popup = L.popup().setContent(popupContent);
-    layer.bindPopup(popup).openPopup();
+  
+    
+    
   
     // Add attraction to favorites
     function addToFavorites(attraction: any) {
@@ -254,18 +261,9 @@ function MapWithPlaceholder() {
        // Replace with actual user ID
        const userId = localStorage.getItem("userId");
       // Send POST request to server to add attraction to user's favorites
-      axios.post('/favorites', {
-        attractionId: attraction.id,
-        userId: userId
-      })
-      .then(response => {
-        console.log(`Added ${attraction.name} to favorites.`);
-      })
-      .catch(error => {
-        console.error(error);
-
-      console.log(`Added ${attraction.name} to favorites.`);
-      });
+      
+      // with supabase add favorite atrations
+      //
     }}
   return (
     
@@ -289,43 +287,83 @@ function MapWithPlaceholder() {
     
   )
 }
+
+
 function UserInfo() {
-  const [favoriteAttractions, setFavoriteAttractions] = useState<Attraction[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const result = await axios.post<Attraction[]>('/api/favoriteAttractions');
-      setFavoriteAttractions(result.data);
-    };
-
-    fetchData();
-  }, []);
-
-  const handleRemoveAttraction = async (id: number) => {
-    await axios.delete(`/api/favoriteAttractions/${id}`);
-    const updatedAttractions = favoriteAttractions.filter((attraction) => attraction.id !== id);
-    setFavoriteAttractions(updatedAttractions);
+  var info = JSON.parse(localStorage.getItem('data') as string);
+  const {username} = info
+  const ListDisplay: React.FC<Props> = ({ list, onDeleteItem }) => {
+    return (
+      <ul>
+        {list.map((item, index) => (
+          <li key={index}>
+            {item}
+            <button onClick={() => onDeleteItem(index)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+    );
   };
-  const myItem = localStorage.getItem('name');
+
+const {id} = info
+const [favorites, setFavorites] = useState<Favorite[]>([]);
+
+useEffect(() => {
+  const fetchFavorites = async () => {
+    const { data, error } = await supabase
+      .from("Favorites")
+      .select("*")
+      .eq("id", id);
+
+    if (error) {
+      console.error(error);
+    } else if (data) {
+      const favoritesData: Favorite[] = data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        // map other properties as needed
+      }));
+      setFavorites(favoritesData);
+    }
+  };
+
+  fetchFavorites();
+}, [id]);
+
+  async function handleDeleteFavorite(index: number) {
+    if (favorites.length === 0) {
+      return;
+    }
+    const { data, error } = await supabase
+      .from('favorites')
+      .delete()
+      .eq('id', favorites[index].id);
+  
+    if (error) {
+      console.error(error);
+    } else {
+      const newFavorites = [...favorites];
+      newFavorites.splice(index, 1);
+      setFavorites(newFavorites);
+    }
+  }
+
   return (
     <div id='info'>
       
      <h2>username:</h2>
-     <h1>{localStorage.getItem('name')}</h1>
+     <h1>{username}</h1>
       <div>
         <h3>Favorite Attractions:</h3>
-        <ul>
-          {favoriteAttractions.map((attraction) => (
-            <li key={attraction.id}>
-              {attraction.name}
-              <button onClick={() => handleRemoveAttraction(attraction.id)}>Remove</button>
-            </li>
-          ))}
-        </ul>
+        <ListDisplay
+        list={favorites.map((favorite) => favorite.name)}
+        onDeleteItem={handleDeleteFavorite}
+      />
       </div>
     </div>
   );
 }
+
 
 function MainPage({ onLogout }: MainProps) {
   
@@ -333,7 +371,11 @@ function MainPage({ onLogout }: MainProps) {
     <div>
     <MapWithPlaceholder />
     <UserInfo />
+    <div>
+      
     </div>
+    </div>
+    
   );
 }
  
