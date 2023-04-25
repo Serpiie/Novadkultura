@@ -26,6 +26,10 @@ interface User {
   password: string; 
 }
 
+interface UserInfoData {
+  id: number;
+  username: string;
+}
 
 
 interface MainProps {
@@ -87,7 +91,7 @@ return(
             <Route path="/login" element={<LoginPage  />} />
             <Route path="/register" element={<RegisterPage  />} />
             <Route path="/main" element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/" element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/main" element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} />
           </Routes>
         </main>
       </div>
@@ -289,10 +293,7 @@ function MapWithPlaceholder() {
 }
 
 
-interface UserInfoData {
-  id: number;
-  username: string;
-}
+
 
 
 function UserInfo() {
