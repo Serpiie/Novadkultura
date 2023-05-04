@@ -91,7 +91,6 @@ return(
             <Route path="/login" element={<LoginPage  />} />
             <Route path="/register" element={<RegisterPage  />} />
             <Route path="/main" element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/main" element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} />
           </Routes>
         </main>
       </div>
@@ -113,7 +112,7 @@ function LoginPage() {
     {
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("data", JSON.stringify(logged));
-    navigate("/main");
+    navigate("/");
     }
   };
 
