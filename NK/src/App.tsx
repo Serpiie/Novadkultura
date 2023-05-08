@@ -328,10 +328,12 @@ function UserInfo() {
 
   return (
     <div id='info'>
-      
-      <h2>Username:</h2>
+      <ul>
+      <li>Username:</li>
       <h1>{username}</h1>
-      <h2>Favorites:</h2>
+      <li>Favorites:</li>
+      <li></li>
+      </ul>
       {favorites.length > 0 ? (
         <ul>
           {favorites.map((favorite) => (
