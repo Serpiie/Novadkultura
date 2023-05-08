@@ -113,12 +113,12 @@ button:hover {
 
 .map {
   width: 85%;
-  height: 700px;
+  height: 850px;
   float: right;
 }
 
 .map .leaflet-control-zoom {
-  background-color: rgb(255, 255, 255);
+  background-color: rgb(0, 0, 0);
 }
 
 #register {
@@ -167,6 +167,11 @@ button:hover {
   left: 0;
 }
 
+#logoff {
+  position: absolute;
+  bottom: 120px;
+  left: 0;
+}
 
 .popup-content {
   font-family: Arial, sans-serif;
@@ -245,3 +250,5 @@ button {
 button:hover {
   background-color: #cc0000;
 }
+
+

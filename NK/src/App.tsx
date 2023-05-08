@@ -53,23 +53,18 @@ async function checkUser(username: string, password: string) {
     console.error(error);
     return false;
   }
-
-  if (!data) {
-    console.log('User not found');
-    return false;
-  }
   
   return data
   
 }
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(Boolean(localStorage.getItem("isLoggedIn")));
-  localStorage.setItem('isLoggedIn', 'false')
+  const [isLoggedIn, setIsLoggedIn] = useState<string>(String(localStorage.getItem("isLoggedIn")));
+ 
 
     const handleLogout = (): void => {
       localStorage.removeItem('isLoggedIn');
-      setIsLoggedIn(false);
+      setIsLoggedIn('false');
     };
  
 return(
@@ -79,7 +74,7 @@ return(
         <header>
           <nav>
             <ul>
-              <li><Link to="/main">main</Link></li>
+              <li><Link to="/">main</Link></li>
               <li><Link to="/login">login</Link></li>
               <li><Link to="/register">register</Link></li>
             </ul>
@@ -90,7 +85,7 @@ return(
           <Routes>
             <Route path="/login" element={<LoginPage  />} />
             <Route path="/register" element={<RegisterPage  />} />
-            <Route path="/main" element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/" element={isLoggedIn == "true" ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />} />
           </Routes>
         </main>
       </div>
@@ -105,13 +100,11 @@ function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const logged = await checkUser(user.username, user.password);
-    if (!logged)
-    {}
-    else
+    const data = await checkUser(user.username, user.password);
+    if (data)
     {
     localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("data", JSON.stringify(logged));
+    localStorage.setItem("data", JSON.stringify(data));
     navigate("/");
     }
   };
@@ -146,12 +139,11 @@ function RegisterPage() {
   const navigate = useNavigate();
   async function generateUniqueId() {
 
-    const userId = Math.floor(Math.random() * 1000000)
-    let id = userId 
-  // Define the query to select the user with the given ID
-    const { data, error } = await supabase.from('Users').select('*').eq('id', userId);
+    let id = Math.floor(Math.random() * 1000000)
   
-  // Check for errors and whether the user exists
+    const { data, error } = await supabase.from('Users').select('*').eq('id', id);
+  
+
     if (error) {
       console.error(error);
     } 
@@ -168,6 +160,7 @@ function RegisterPage() {
     const id = await generateUniqueId();
     await addNewUser(id, user.username, user.password);
     navigate('/login');
+    alert('Konts izveidots veiksmīgi');
   };
 
   return (
@@ -197,35 +190,37 @@ declare global {
 
 function MapWithPlaceholder() {
   
-  const geojsonStyle = {
-    color: 'green',
-    fillColor: 'lightgreen',
-    fillOpacity: 0.5,
-    weight: 2,
-  };
+
+
+  function getColor(d:any) {
+    
+    return d > 2524 ? '#800026' :
+           d > 2387  ? '#BD0026' :
+           d > 1840  ? '#E31A1C' :
+           d > 1031  ? '#FC4E2A' :
+           d > 309   ? '#FD8D3C' :
+           d > 102  ? '#FEB24C' :
+           d > 0   ? '#FED976' :
+                      '#FFEDA0';
+  }
 
   function getFeatureStyle(feature: any): L.PathOptions {
+    
     return {
-      fillColor: 'blue',
-      weight: 2,
+      fillColor: getColor(feature.properties.PLAT_KVKM),
+      weight: 3,
       opacity: 1,
       color: 'white',
       dashArray: '3',
-      fillOpacity: 0.5
+      fillOpacity: 0.9
     };
   }  
   async function addToFavorites(Adrese: string, ObjektaNosaukums: string) {
     var info = JSON.parse(localStorage.getItem('data') as string);
-    const {id} = info
+    const { id } = info
     const { data, error } = await supabase
       .from('Favorites')
       .insert([{ id, Adrese, ObjektaNosaukums }]);
-    
-    if (error) {
-      console.error(error);
-    } else {
-      console.log(data);
-    } 
     }
     
   async function handleClick(e: any) {
@@ -235,15 +230,13 @@ function MapWithPlaceholder() {
     
     const { data, error } = await supabase
     .from("Muzejs")
-   .select("*")
-   .like("Adrese", `%${label}%`)
+    .select("*")
+    .like("Adrese", `%${label}%`)
 
-    if (error) {
-      console.error(error);
-    } 
+    if (error) { console.error(error); } 
     else {
-      const dataList = data
-      .map((row: any) => {
+        const dataList = data
+        .map((row: any) => {
         const { Adrese, ObjektaNosaukums } = row;
         return `
           <li class="popup-list-item">
@@ -272,7 +265,7 @@ function MapWithPlaceholder() {
     
     <MapContainer className="map"
       center={[56.8796, 24.6032]}
-      zoom={7.4}
+      zoom={8}
       scrollWheelZoom={false}
       placeholder={<MapPlaceholder />}>
       <TileLayer
@@ -280,13 +273,13 @@ function MapWithPlaceholder() {
         url="https://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}{r}.png"
         //url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-       <GeoJSON data={typedGeojson} style={geojsonStyle}
+       <GeoJSON data={typedGeojson} style={getFeatureStyle}
         onEachFeature={(feature, layer) => { layer.on({ click: handleClick}); }}
         pointToLayer={(feature, latlng) => { return L.circleMarker(latlng, getFeatureStyle(feature)); }}
       />
 
     </MapContainer>
-    
+     
     
   )
 }
@@ -328,13 +321,15 @@ function UserInfo() {
       console.log(error);
     } else {
       setFavorites(favorites.filter(favorite => favorite.id !== id));
+      window.location.reload();
     }
   };
 
 
   return (
     <div id='info'>
-      <h2>username:</h2>
+      
+      <h2>Username:</h2>
       <h1>{username}</h1>
       <h2>Favorites:</h2>
       {favorites.length > 0 ? (
@@ -357,12 +352,18 @@ function UserInfo() {
 
 
 function MainPage({ onLogout }: MainProps) {
-  
+  const handleLogout = () => {
+    // Call the onLogout function passed as a prop
+    onLogout();
+  };
   return (
     <div>
     <MapWithPlaceholder />
     <UserInfo />
-    <div>
+    <div  id='logoff'>
+    <button onClick={handleLogout}>
+      Logout
+    </button>
     </div>
     </div>
     
