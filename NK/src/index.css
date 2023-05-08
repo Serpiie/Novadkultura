@@ -112,8 +112,8 @@ button:hover {
 
 
 .map {
-  width: 85%;
-  height: 850px;
+  width: 78%;
+  height: 800px;
   float: right;
 }
 
@@ -255,5 +255,12 @@ button:hover {
 #info {
   border: 5px solid rgb(54, 33, 103);
   padding: 10px;
-  width: 180px;
+  width: 300px;
+}
+
+
+#favoriteList {
+  max-height: 250px; /* Set the maximum height of the div */
+  overflow-y: scroll; /* Enable vertical scrolling */
+  overflow-x: hidden
 }

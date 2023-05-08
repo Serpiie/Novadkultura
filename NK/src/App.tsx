@@ -333,7 +333,9 @@ function UserInfo() {
       <h1>{username}</h1>
       <li>Favorites:</li>
       <li></li>
+      
       </ul>
+      <div id="favoriteList">
       {favorites.length > 0 ? (
         <ul>
           {favorites.map((favorite) => (
@@ -347,6 +349,7 @@ function UserInfo() {
       ) : (
         <p>No favorites</p>
       )}
+      </div>
     </div>
   );
 }
