@@ -106,6 +106,7 @@ function LoginPage() {
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("data", JSON.stringify(data));
     navigate("/");
+    window.location.reload()
     }
   };
 
@@ -249,9 +250,11 @@ function MapWithPlaceholder() {
       .join('');
     
     const popupContent = `
+      <div id="mapList">
       <div class="popup-content">
         <div class="popup-header">${feature.properties.NOSAUKUMS}</div>
         <ul class="popup-list">${dataList}</ul>
+      </div>
       </div>
     `;
     const popup = L.popup().setContent(popupContent);

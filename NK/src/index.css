@@ -264,3 +264,9 @@ button:hover {
   overflow-y: scroll; /* Enable vertical scrolling */
   overflow-x: hidden
 }
+
+#mapList {
+max-height: 250px; /* Set the maximum height of the div */
+overflow-y: scroll; /* Enable vertical scrolling */
+overflow-x: hidden
+}
