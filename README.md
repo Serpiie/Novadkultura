@@ -1,2 +1,2 @@
-# Novadkultūra
-Vieta atrakciju atrašanai
+# Novadkultūra 
+Vieta atrakciju atrašanai / A place to find atractions
